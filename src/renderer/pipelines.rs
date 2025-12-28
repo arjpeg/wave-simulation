@@ -1,0 +1,75 @@
+use wgpu::*;
+
+use crate::renderer::{frame::DEPTH_FORMAT, gpu_context::SURFACE_VIEW_FORMAT, shaders::Shaders};
+
+/// Manages the creation and lifecycle of all pipelines and their associated bind group layouts.
+pub struct Pipelines {
+    /// The pipeline used for rendering a triangle.
+    pub triangle_pipeline: RenderPipeline,
+
+    /// The bind group layout for holding a camera's transformation matrix.
+    pub camera_bind_group_layout: BindGroupLayout,
+}
+
+impl Pipelines {
+    /// Creates all the [`Pipelines`] given their associated shaders.
+    pub fn new(device: &Device, shaders: &Shaders) -> Self {
+        let camera_bind_group_layout =
+            device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                label: Some("Pipelines::camera_bind_group_layout"),
+                entries: &[BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::VERTEX,
+                    ty: BindingType::Buffer {
+                        ty: BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let triangle_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+            label: Some("Pipelines::triangle_pipeline_layout"),
+            bind_group_layouts: &[&camera_bind_group_layout],
+            push_constant_ranges: &[],
+        });
+
+        let triangle_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            label: Some("Pipelines::triangle_pipeline"),
+            layout: Some(&triangle_pipeline_layout),
+            vertex: VertexState {
+                module: &shaders.triangle_shader,
+                entry_point: Some("vs_main"),
+                compilation_options: PipelineCompilationOptions::default(),
+                buffers: &[],
+            },
+            fragment: Some(FragmentState {
+                module: &shaders.triangle_shader,
+                entry_point: Some("fs_main"),
+                compilation_options: PipelineCompilationOptions::default(),
+                targets: &[Some(ColorTargetState {
+                    format: SURFACE_VIEW_FORMAT,
+                    blend: None,
+                    write_mask: ColorWrites::ALL,
+                })],
+            }),
+            primitive: PrimitiveState::default(),
+            multisample: MultisampleState::default(),
+            depth_stencil: Some(DepthStencilState {
+                format: DEPTH_FORMAT,
+                depth_write_enabled: true,
+                depth_compare: CompareFunction::LessEqual,
+                stencil: StencilState::default(),
+                bias: DepthBiasState::default(),
+            }),
+            multiview: None,
+            cache: None,
+        });
+
+        Self {
+            triangle_pipeline,
+            camera_bind_group_layout,
+        }
+    }
+}
