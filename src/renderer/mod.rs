@@ -3,6 +3,7 @@ pub mod frame;
 pub mod gpu_context;
 pub mod pipelines;
 pub mod shaders;
+pub mod surface;
 
 use std::sync::Arc;
 
@@ -15,6 +16,7 @@ use crate::renderer::{
     gpu_context::{GpuContext, SURFACE_VIEW_FORMAT},
     pipelines::Pipelines,
     shaders::Shaders,
+    surface::SurfaceMesh,
 };
 
 /// Manages all GPU state and renders all game content.
@@ -36,6 +38,9 @@ pub struct Renderer {
 
     /// The gpu side state of the camera's view-projection matrix.
     camera: CameraGpuState,
+
+    /// The mesh making up the surface displaced by the wave simulation.
+    surface: SurfaceMesh,
 }
 
 impl Renderer {
@@ -56,6 +61,8 @@ impl Renderer {
 
         let camera = CameraGpuState::new(&gpu.device, &pipelines);
 
+        let surface = SurfaceMesh::new(&gpu.device);
+
         Ok(Self {
             gpu,
             shaders,
@@ -63,6 +70,7 @@ impl Renderer {
             frame_targets,
             ui_renderer,
             camera,
+            surface,
         })
     }
 
@@ -122,9 +130,12 @@ impl Renderer {
             });
 
             pass.set_bind_group(0, &self.camera.bind_group, &[]);
-            pass.set_pipeline(&self.pipelines.triangle_pipeline);
+            pass.set_pipeline(&self.pipelines.surface_pipeline);
 
-            pass.draw(0..3, 0..1);
+            pass.set_vertex_buffer(0, self.surface.vertex_buffer.slice(..));
+            pass.set_index_buffer(self.surface.index_buffer.slice(..), IndexFormat::Uint32);
+
+            pass.draw_indexed(0..self.surface.index_count, 0, 0..1);
         }
 
         self.render_ui(&view, &mut encoder, ui_context, ui);

@@ -48,9 +48,9 @@ impl App {
         let renderer = Renderer::new(Arc::clone(&window)).await.unwrap();
 
         let camera = Camera {
-            position: vec3(0.0, 0.0, 2.0),
+            position: vec3(2.5, 3.0, 6.0),
             yaw: 0.0,
-            pitch: 0.0,
+            pitch: -std::f32::consts::FRAC_PI_4,
             fov: 45.0f32.to_radians(),
             aspect_ratio: 0.0,
             movement_sensitivity: 2.0,

@@ -92,7 +92,7 @@ impl Camera {
         self.pitch -= dy * self.mouse_sensitivity;
         self.yaw += dx * self.mouse_sensitivity;
 
-        self.pitch = self.pitch.clamp(-FRAC_PI_2, FRAC_PI_2);
+        self.pitch = self.pitch.clamp(-FRAC_PI_2 + 0.001, FRAC_PI_2 - 0.001);
     }
 
     /// Resizes the camera's aspect ratio to match the new window size.

@@ -1,11 +1,13 @@
 use wgpu::*;
 
-use crate::renderer::{frame::DEPTH_FORMAT, gpu_context::SURFACE_VIEW_FORMAT, shaders::Shaders};
+use crate::renderer::{
+    frame::DEPTH_FORMAT, gpu_context::SURFACE_VIEW_FORMAT, shaders::Shaders, surface::SurfaceVertex,
+};
 
 /// Manages the creation and lifecycle of all pipelines and their associated bind group layouts.
 pub struct Pipelines {
-    /// The pipeline used for rendering a triangle.
-    pub triangle_pipeline: RenderPipeline,
+    /// The pipeline used for rendering a [`SurfaceMesh`].
+    pub surface_pipeline: RenderPipeline,
     /// The bind group layout for holding a camera's transformation matrix.
     pub camera_bind_group_layout: BindGroupLayout,
 
@@ -35,20 +37,20 @@ impl Pipelines {
                 }],
             });
 
-        let triangle_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: Some("Pipelines::triangle_pipeline_layout"),
+        let surface_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+            label: Some("Pipelines::surface_pipeline_layout"),
             bind_group_layouts: &[&camera_bind_group_layout],
             push_constant_ranges: &[],
         });
 
-        let triangle_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
-            label: Some("Pipelines::triangle_pipeline"),
-            layout: Some(&triangle_pipeline_layout),
+        let surface_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            label: Some("Pipelines::surface_pipeline"),
+            layout: Some(&surface_pipeline_layout),
             vertex: VertexState {
                 module: &shaders.triangle_shader,
                 entry_point: Some("vs_main"),
                 compilation_options: PipelineCompilationOptions::default(),
-                buffers: &[],
+                buffers: &[SurfaceVertex::LAYOUT],
             },
             fragment: Some(FragmentState {
                 module: &shaders.triangle_shader,
@@ -130,7 +132,7 @@ impl Pipelines {
         });
 
         Self {
-            triangle_pipeline,
+            surface_pipeline,
             camera_bind_group_layout,
             simulation_pipeline,
             texture_read_bind_group_layout,
