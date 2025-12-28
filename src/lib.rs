@@ -1,6 +1,7 @@
 pub mod application;
 pub mod input;
 pub mod renderer;
+pub mod simulation;
 pub mod timer;
 
 use crate::application::AppHandler;

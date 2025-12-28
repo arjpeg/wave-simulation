@@ -24,9 +24,9 @@ pub struct Renderer {
     pub gpu: GpuContext,
 
     /// All shaders used in the rendering process.
-    shaders: Shaders,
+    pub shaders: Shaders,
     /// All (compute and render) pipelines and bind group layouts used in the application.
-    pipelines: Pipelines,
+    pub pipelines: Pipelines,
 
     /// The GPU textures that need to be attatched every frame.
     frame_targets: FrameTargets,

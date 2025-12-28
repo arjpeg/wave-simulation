@@ -4,6 +4,9 @@ use wgpu::{Device, ShaderModule, include_wgsl};
 pub struct Shaders {
     /// The shader used for drawing a triangle.
     pub triangle_shader: ShaderModule,
+
+    /// The shader used for running a wave simulation compute pass.
+    pub simulation_shader: ShaderModule,
 }
 
 impl Shaders {
@@ -12,6 +15,12 @@ impl Shaders {
         let triangle_shader =
             device.create_shader_module(include_wgsl!("../../assets/triangle_shader.wgsl"));
 
-        Self { triangle_shader }
+        let simulation_shader =
+            device.create_shader_module(include_wgsl!("../../assets/simulation.wgsl"));
+
+        Self {
+            triangle_shader,
+            simulation_shader,
+        }
     }
 }

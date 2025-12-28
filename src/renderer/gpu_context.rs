@@ -41,7 +41,15 @@ impl GpuContext {
             })
             .await?;
 
-        let (device, queue) = adapter.request_device(&DeviceDescriptor::default()).await?;
+        let (device, queue) = adapter
+            .request_device(&DeviceDescriptor {
+                required_features: Features {
+                    features_webgpu: FeaturesWebGPU::FLOAT32_FILTERABLE,
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .await?;
 
         let PhysicalSize { width, height } = window.inner_size();
 

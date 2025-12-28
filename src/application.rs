@@ -15,6 +15,7 @@ use winit::{
 use crate::{
     input::InputState,
     renderer::{Renderer, camera::Camera},
+    simulation::WaveSimulation,
     timer::FrameTimer,
 };
 
@@ -31,6 +32,9 @@ pub struct App {
     input: InputState,
     /// The timer keeping track of frame durations.
     timer: FrameTimer,
+
+    /// The current GPU state of the simulation.
+    simulation: WaveSimulation,
 
     /// The state of the UI context.
     ui_context: egui::Context,
@@ -56,6 +60,8 @@ impl App {
         let input = InputState::new(Arc::clone(&window));
         let timer = FrameTimer::new();
 
+        let simulation = WaveSimulation::new(&renderer.gpu.device, &renderer.pipelines);
+
         let ui_context = egui::Context::default();
         let ui_input = egui_winit::State::new(
             ui_context.clone(),
@@ -72,6 +78,7 @@ impl App {
             camera,
             input,
             timer,
+            simulation,
             ui_context,
             ui_input,
         }
@@ -199,7 +206,7 @@ impl ApplicationHandler<App> for AppHandler {
         #[cfg(not(target_arch = "wasm32"))]
         {
             window_attributes = window_attributes
-                .with_title("gpu-template")
+                .with_title("wave simulation")
                 .with_inner_size(winit::dpi::LogicalSize::new(1920, 1080));
         }
 
