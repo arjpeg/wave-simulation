@@ -50,8 +50,8 @@ impl SurfaceMesh {
                     let row_offset = row * SIMULATION_RESOLUTION;
                     [
                         // triangle 1
-                        row_offset + col,                         // bottom left
                         row_offset + SIMULATION_RESOLUTION + col, // top left
+                        row_offset + col,                         // bottom left
                         row_offset + col + 1,                     // bottom right
                         // triangle 2
                         row_offset + col + 1, // bottom right

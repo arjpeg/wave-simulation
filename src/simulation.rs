@@ -5,12 +5,13 @@ use crate::renderer::pipelines::Pipelines;
 /// The extent of the simulation across the X and Z axes.
 pub const SIMULATION_LENGTH: f32 = 5.0;
 /// How many intervals the simulation is subdivided across each axis.
-pub const SIMULATION_RESOLUTION: usize = 10;
+pub const SIMULATION_RESOLUTION: usize = 500;
 
 /// Manages all GPU state to numerically solve the wave equation.
 ///
 /// The wave state is represented by two storage textures in the [`TextureFormat::Rg32Float`] format,
 /// with the red channel representing u(x, t) and the green channel representing u(x, t-1).
+#[allow(unused)]
 pub struct WaveSimulation {
     /// Which texture is currently being read / written to.
     /// - if `active` is even, `a` is the "read" texture and `b` is the "write" texture,
@@ -68,6 +69,30 @@ impl WaveSimulation {
         } else {
             &self.b_read_a_write_bind_group
         }
+    }
+
+    /// Excecutes the simulation compute pipeline, advancing the simulation by one "tick".
+    pub fn tick(&mut self, encoder: &mut CommandEncoder, pipelines: &Pipelines) {
+        let mut pass = encoder.begin_compute_pass(&ComputePassDescriptor {
+            label: Some("WaveSimulation::tick"),
+            timestamp_writes: None,
+        });
+
+        let active_bind_group = if self.active % 2 == 0 {
+            &self.a_read_b_write_bind_group
+        } else {
+            &self.b_read_a_write_bind_group
+        };
+
+        // the shader has a workgroup size of 16x16x1
+        let x = (self.texture_a.width() as f32 / 16.0).ceil() as u32;
+        let y = (self.texture_a.height() as f32 / 16.0).ceil() as u32;
+
+        pass.set_pipeline(&pipelines.simulation_pipeline);
+        pass.set_bind_group(0, active_bind_group, &[]);
+        pass.dispatch_workgroups(x, y, 1);
+
+        self.active += 1;
     }
 
     /// Creates a storage [`Texture`] appropriate for use in the simulation.

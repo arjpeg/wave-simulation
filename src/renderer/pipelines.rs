@@ -42,7 +42,7 @@ impl Pipelines {
                     // the "read" texture
                     BindGroupLayoutEntry {
                         binding: 0,
-                        visibility: ShaderStages::COMPUTE,
+                        visibility: ShaderStages::COMPUTE | ShaderStages::VERTEX,
                         ty: BindingType::Texture {
                             sample_type: TextureSampleType::Float { filterable: true },
                             view_dimension: TextureViewDimension::D2,
@@ -92,7 +92,10 @@ impl Pipelines {
                     write_mask: ColorWrites::ALL,
                 })],
             }),
-            primitive: PrimitiveState::default(),
+            primitive: PrimitiveState {
+                cull_mode: Some(Face::Back),
+                ..Default::default()
+            },
             multisample: MultisampleState::default(),
             depth_stencil: Some(DepthStencilState {
                 format: DEPTH_FORMAT,

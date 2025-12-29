@@ -134,10 +134,13 @@ impl App {
         self.ui_input
             .handle_platform_output(&self.window, ui.clone().platform_output);
 
-        self.renderer
-            .render(&self.camera, &self.ui_context, ui, &self.simulation, || {
-                self.window.pre_present_notify()
-            });
+        self.renderer.render(
+            &self.camera,
+            &self.ui_context,
+            ui,
+            &mut self.simulation,
+            || self.window.pre_present_notify(),
+        );
 
         self.window.request_redraw();
     }

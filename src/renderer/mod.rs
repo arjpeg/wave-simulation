@@ -83,7 +83,7 @@ impl Renderer {
         camera: &Camera,
         ui_context: &egui::Context,
         ui: egui::FullOutput,
-        simulation: &WaveSimulation,
+        simulation: &mut WaveSimulation,
         pre_present: impl FnOnce(),
     ) {
         let output = self.gpu.surface.get_current_texture().unwrap();
@@ -99,51 +99,9 @@ impl Renderer {
 
         self.camera.update_buffer(&self.gpu.queue, camera);
 
-        {
-            let depth_texture = self
-                .frame_targets
-                .depth
-                .create_view(&TextureViewDescriptor::default());
+        simulation.tick(&mut encoder, &self.pipelines);
 
-            let mut pass = encoder.begin_render_pass(&RenderPassDescriptor {
-                label: Some("Renderer::main_render_pass"),
-                color_attachments: &[Some(RenderPassColorAttachment {
-                    view: &view,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: Operations {
-                        load: LoadOp::Clear(Color {
-                            r: 0.01,
-                            g: 0.01,
-                            b: 0.01,
-                            a: 1.0,
-                        }),
-                        store: StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                    view: &depth_texture,
-                    depth_ops: Some(Operations {
-                        load: LoadOp::Clear(1.0),
-                        store: StoreOp::Store,
-                    }),
-                    stencil_ops: None,
-                }),
-                timestamp_writes: None,
-                occlusion_query_set: None,
-            });
-
-            pass.set_pipeline(&self.pipelines.surface_pipeline);
-
-            pass.set_bind_group(0, &self.camera.bind_group, &[]);
-            pass.set_bind_group(1, simulation.get_active_texture(), &[]);
-
-            pass.set_vertex_buffer(0, self.surface.vertex_buffer.slice(..));
-            pass.set_index_buffer(self.surface.index_buffer.slice(..), IndexFormat::Uint32);
-
-            pass.draw_indexed(0..self.surface.index_count, 0, 0..1);
-        }
-
+        self.render_surface(&view, &mut encoder, simulation);
         self.render_ui(&view, &mut encoder, ui_context, ui);
 
         self.gpu.queue.submit([encoder.finish()]);
@@ -156,6 +114,56 @@ impl Renderer {
     pub fn resize(&mut self, size: PhysicalSize<u32>) {
         self.gpu.resize(size);
         self.frame_targets.resize(&self.gpu.device, size);
+    }
+
+    fn render_surface(
+        &mut self,
+        view: &TextureView,
+        encoder: &mut CommandEncoder,
+        simulation: &WaveSimulation,
+    ) {
+        let depth_texture = self
+            .frame_targets
+            .depth
+            .create_view(&TextureViewDescriptor::default());
+
+        let mut pass = encoder.begin_render_pass(&RenderPassDescriptor {
+            label: Some("Renderer::main_render_pass"),
+            color_attachments: &[Some(RenderPassColorAttachment {
+                view: &view,
+                depth_slice: None,
+                resolve_target: None,
+                ops: Operations {
+                    load: LoadOp::Clear(Color {
+                        r: 0.01,
+                        g: 0.01,
+                        b: 0.01,
+                        a: 1.0,
+                    }),
+                    store: StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                view: &depth_texture,
+                depth_ops: Some(Operations {
+                    load: LoadOp::Clear(1.0),
+                    store: StoreOp::Store,
+                }),
+                stencil_ops: None,
+            }),
+            timestamp_writes: None,
+            occlusion_query_set: None,
+        });
+
+        pass.set_pipeline(&self.pipelines.surface_pipeline);
+
+        pass.set_bind_group(0, &self.camera.bind_group, &[]);
+        pass.set_bind_group(1, simulation.get_active_texture(), &[]);
+
+        pass.set_vertex_buffer(0, self.surface.vertex_buffer.slice(..));
+        pass.set_index_buffer(self.surface.index_buffer.slice(..), IndexFormat::Uint32);
+
+        pass.draw_indexed(0..self.surface.index_count, 0, 0..1);
     }
 
     fn render_ui(
