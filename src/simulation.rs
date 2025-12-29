@@ -61,6 +61,15 @@ impl WaveSimulation {
         }
     }
 
+    /// Returns the currently "active" (read) texture's view in a [`BindGroup`] in slot 0.
+    pub fn get_active_texture(&self) -> &BindGroup {
+        if self.active % 2 == 0 {
+            &self.a_read_b_write_bind_group
+        } else {
+            &self.b_read_a_write_bind_group
+        }
+    }
+
     /// Creates a storage [`Texture`] appropriate for use in the simulation.
     fn create_compute_texture(device: &Device, label: &str) -> Texture {
         let xz_length = (SIMULATION_LENGTH * SIMULATION_RESOLUTION as f32) as u32;

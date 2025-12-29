@@ -10,13 +10,16 @@ use std::sync::Arc;
 use wgpu::*;
 use winit::{dpi::PhysicalSize, window::Window};
 
-use crate::renderer::{
-    camera::{Camera, CameraGpuState},
-    frame::FrameTargets,
-    gpu_context::{GpuContext, SURFACE_VIEW_FORMAT},
-    pipelines::Pipelines,
-    shaders::Shaders,
-    surface::SurfaceMesh,
+use crate::{
+    renderer::{
+        camera::{Camera, CameraGpuState},
+        frame::FrameTargets,
+        gpu_context::{GpuContext, SURFACE_VIEW_FORMAT},
+        pipelines::Pipelines,
+        shaders::Shaders,
+        surface::SurfaceMesh,
+    },
+    simulation::WaveSimulation,
 };
 
 /// Manages all GPU state and renders all game content.
@@ -74,12 +77,13 @@ impl Renderer {
         })
     }
 
-    /// Renders all world content onto the surface.
+    /// Renders all world content onto the surface and runs all compute passes.
     pub fn render(
         &mut self,
         camera: &Camera,
         ui_context: &egui::Context,
         ui: egui::FullOutput,
+        simulation: &WaveSimulation,
         pre_present: impl FnOnce(),
     ) {
         let output = self.gpu.surface.get_current_texture().unwrap();
@@ -129,8 +133,10 @@ impl Renderer {
                 occlusion_query_set: None,
             });
 
-            pass.set_bind_group(0, &self.camera.bind_group, &[]);
             pass.set_pipeline(&self.pipelines.surface_pipeline);
+
+            pass.set_bind_group(0, &self.camera.bind_group, &[]);
+            pass.set_bind_group(1, simulation.get_active_texture(), &[]);
 
             pass.set_vertex_buffer(0, self.surface.vertex_buffer.slice(..));
             pass.set_index_buffer(self.surface.index_buffer.slice(..), IndexFormat::Uint32);

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use glam::vec3;
+
 #[cfg(target_arch = "wasm32")]
 use winit::event_loop::EventLoopProxy;
 
@@ -134,7 +135,7 @@ impl App {
             .handle_platform_output(&self.window, ui.clone().platform_output);
 
         self.renderer
-            .render(&self.camera, &self.ui_context, ui, || {
+            .render(&self.camera, &self.ui_context, ui, &self.simulation, || {
                 self.window.pre_present_notify()
             });
 

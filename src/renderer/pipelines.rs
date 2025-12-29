@@ -13,7 +13,6 @@ pub struct Pipelines {
 
     /// The compute pipeline used for advancing the state of the wave simulation by one "tick".
     pub simulation_pipeline: ComputePipeline,
-
     /// The bind group layout for one texture being read from, and the other being written to.
     pub texture_read_write_bind_group_layout: BindGroupLayout,
 }
@@ -36,9 +35,41 @@ impl Pipelines {
                 }],
             });
 
+        let texture_read_write_bind_group_layout =
+            device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+                label: Some("Pipelines::texture_read_write_bind_group_layout"),
+                entries: &[
+                    // the "read" texture
+                    BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: ShaderStages::COMPUTE,
+                        ty: BindingType::Texture {
+                            sample_type: TextureSampleType::Float { filterable: true },
+                            view_dimension: TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                    // the "write" texture
+                    BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: ShaderStages::COMPUTE,
+                        ty: BindingType::StorageTexture {
+                            access: StorageTextureAccess::WriteOnly,
+                            format: TextureFormat::Rg32Float,
+                            view_dimension: TextureViewDimension::D2,
+                        },
+                        count: None,
+                    },
+                ],
+            });
+
         let surface_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Pipelines::surface_pipeline_layout"),
-            bind_group_layouts: &[&camera_bind_group_layout],
+            bind_group_layouts: &[
+                &camera_bind_group_layout,
+                &texture_read_write_bind_group_layout,
+            ],
             push_constant_ranges: &[],
         });
 
@@ -73,35 +104,6 @@ impl Pipelines {
             multiview: None,
             cache: None,
         });
-
-        let texture_read_write_bind_group_layout =
-            device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-                label: Some("Pipelines::texture_read_write_bind_group_layout"),
-                entries: &[
-                    // the "read" texture
-                    BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: ShaderStages::COMPUTE,
-                        ty: BindingType::Texture {
-                            sample_type: TextureSampleType::Float { filterable: true },
-                            view_dimension: TextureViewDimension::D2,
-                            multisampled: false,
-                        },
-                        count: None,
-                    },
-                    // the "write" texture
-                    BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: ShaderStages::COMPUTE,
-                        ty: BindingType::StorageTexture {
-                            access: StorageTextureAccess::WriteOnly,
-                            format: TextureFormat::Rg32Float,
-                            view_dimension: TextureViewDimension::D2,
-                        },
-                        count: None,
-                    },
-                ],
-            });
 
         let simulation_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Pipelines::simulation_pipeline_layout"),
