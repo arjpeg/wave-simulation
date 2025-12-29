@@ -22,46 +22,51 @@ pub struct WaveSimulation {
     /// Storage texture 'b' of the simulation.
     texture_b: Texture,
 
-    /// The bind group for storing a view and sampler for *reading* from `texture_a`.
-    bind_group_read_a: BindGroup,
-    /// The bind group for storing a view and sampler for *reading* from `texture_b`.
-    bind_group_read_b: BindGroup,
-
-    /// The bind group for storing a view for *writing* to `texture_a`.
-    bind_group_write_a: BindGroup,
-    /// The bind group for storing a view for *writing* to `texture_b`.
-    bind_group_write_b: BindGroup,
+    /// The bind group holding `texture_a` as the "read" texture and `texture_b` as the "write"
+    /// texture.
+    a_read_b_write_bind_group: BindGroup,
+    /// The bind group holding `texture_a` as the "write" texture and `texture_b` as the "read"
+    /// texture.
+    b_read_a_write_bind_group: BindGroup,
 }
 
 impl WaveSimulation {
     /// Creates all resources to run the [`WaveSimulation`].
     pub fn new(device: &Device, pipelines: &Pipelines) -> Self {
-        let (texture_a, bind_group_read_a, bind_group_write_a) =
-            Self::create_texture_resources(device, pipelines, "a");
+        let texture_a = Self::create_compute_texture(device, "a");
+        let texture_b = Self::create_compute_texture(device, "b");
 
-        let (texture_b, bind_group_read_b, bind_group_write_b) =
-            Self::create_texture_resources(device, pipelines, "b");
+        let a_read_b_write_bind_group = Self::create_read_write_bind_group(
+            device,
+            pipelines,
+            &texture_a,
+            &texture_b,
+            "a_read_b_write",
+        );
+
+        let b_read_a_write_bind_group = Self::create_read_write_bind_group(
+            device,
+            pipelines,
+            &texture_b,
+            &texture_a,
+            "b_read_a_write",
+        );
+
         Self {
             active: 0,
             texture_a,
             texture_b,
-            bind_group_read_a,
-            bind_group_read_b,
-            bind_group_write_a,
-            bind_group_write_b,
+            a_read_b_write_bind_group,
+            b_read_a_write_bind_group,
         }
     }
 
-    /// Creates a storage texture and its corresponding bind groups (in the order: read, write).
-    fn create_texture_resources(
-        device: &Device,
-        pipelines: &Pipelines,
-        name: &str,
-    ) -> (Texture, BindGroup, BindGroup) {
+    /// Creates a storage [`Texture`] appropriate for use in the simulation.
+    fn create_compute_texture(device: &Device, label: &str) -> Texture {
         let xz_length = (SIMULATION_LENGTH * SIMULATION_RESOLUTION as f32) as u32;
 
-        let texture = device.create_texture(&TextureDescriptor {
-            label: Some(&format!("WaveSimulation::texture_{name}")),
+        device.create_texture(&TextureDescriptor {
+            label: Some(&format!("WaveSimulation::texture_{label}")),
             size: Extent3d {
                 width: xz_length,
                 height: xz_length,
@@ -73,35 +78,36 @@ impl WaveSimulation {
             format: TextureFormat::Rg32Float,
             usage: TextureUsages::STORAGE_BINDING | TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
-        });
+        })
+    }
 
-        let view = texture.create_view(&TextureViewDescriptor::default());
-        let sampler = device.create_sampler(&SamplerDescriptor::default());
+    /// Creates a [`BindGroup`] holding the `left` texture in the read position and the `right`
+    /// texture in the write position, corresponding to [`Pipelines::texture_read_write_bind_group_layout`].
+    fn create_read_write_bind_group(
+        device: &Device,
+        pipelines: &Pipelines,
+        left: &Texture,
+        right: &Texture,
+        label: &str,
+    ) -> BindGroup {
+        let left_view = left.create_view(&TextureViewDescriptor::default());
+        let right_view = right.create_view(&TextureViewDescriptor::default());
 
-        let bind_group_read = device.create_bind_group(&BindGroupDescriptor {
-            label: Some(&format!("WaveSimulation::texture_bind_group_read_{name}")),
-            layout: &pipelines.texture_read_bind_group_layout,
+        device.create_bind_group(&BindGroupDescriptor {
+            label: Some(&format!("WaveSimulation::{label}_bind_group")),
+            layout: &pipelines.texture_read_write_bind_group_layout,
             entries: &[
+                // read texture
                 BindGroupEntry {
                     binding: 0,
-                    resource: BindingResource::TextureView(&view),
+                    resource: BindingResource::TextureView(&left_view),
                 },
+                // write texture
                 BindGroupEntry {
                     binding: 1,
-                    resource: BindingResource::Sampler(&sampler),
+                    resource: BindingResource::TextureView(&right_view),
                 },
             ],
-        });
-
-        let bind_group_write = device.create_bind_group(&BindGroupDescriptor {
-            label: Some(&format!("WaveSimulation::texture_bind_group_write_{name}")),
-            layout: &pipelines.texture_write_bind_group_layout,
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: BindingResource::TextureView(&view),
-            }],
-        });
-
-        (texture, bind_group_read, bind_group_write)
+        })
     }
 }
